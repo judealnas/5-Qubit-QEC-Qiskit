@@ -1,5 +1,6 @@
 # %% Imports
 import qiskit
+from qiskit.extensions import Initialize
 import numpy as np
 # %% Utility funcs
 def rotate(l: list, n: int):
@@ -38,8 +39,8 @@ class FiveQubitCode():
         q_reg = FiveQubitCode.q_reg
         qcirc = qiskit.QuantumCircuit(q_reg,name='Encoder')
         
-        # Initializr data qubits to |+>
-        qcirc.h(q_reg[:-1])
+        # Initialize data qubits to |+>
+        qcirc.h(qcirc.qregs[0][:-1])
         
         # Add CNOTs
         for i in range(num_qubits-1):
@@ -67,13 +68,14 @@ class FiveQubitCode():
         q_reg = FiveQubitCode.q_reg
         qcirc = qiskit.QuantumCircuit(q_reg,a_reg,c_reg,name='Measurement')
 
-        # Prep ancilla in |+> state
-        qcirc.h(a_reg)
+        # Initializr data qubits to |+>
+        qcirc.initialize('+'*4,qcirc.ancillas[:4])
 
         # Construct controlled unitary measurements
         for j,stab in enumerate(FiveQubitCode.stabilizers):
 
-            if j != 0: qcirc.barrier()
+            if j != 0: 
+                qcirc.barrier()
 
             for i,s in enumerate(stab):
                 if s != 'I':
