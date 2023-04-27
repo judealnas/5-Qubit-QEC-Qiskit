@@ -2,3 +2,6 @@
 *.jpg
 __pycache__/
 env/
+*.csv
+generate_lut_txt.py
+*.npz
