@@ -1,6 +1,5 @@
 # %% Imports
 import qiskit
-from qiskit.extensions import Initialize
 import numpy as np
 # %% Utility funcs
 def rotate(l: list, n: int):
