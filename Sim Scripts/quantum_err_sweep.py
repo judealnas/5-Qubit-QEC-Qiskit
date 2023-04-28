@@ -59,7 +59,7 @@ for s in init_states:
 
     for (x,px) in enumerate(pXs):
         for (z,pz) in enumerate(pZs):
-            print(f"Sim {x*pXs.size + z + 1}/{fids.size}")
+            print(f"{s} Sim {x*pXs.size + z + 1}/{fids.size}")
 
             noise_model = get_noise(meas_error=[1,0], quantum_error=[px,pz])
             res = simulator.run(T_qcirc,noise_model=noise_model,shots=shots).result()

@@ -61,9 +61,9 @@ for s in init_states:
 
     for (x,px) in enumerate(pXs):
         for (z,pz) in enumerate(pZs):
-            print(f"Sim {x*pXs.size + z + 1}/{fids.size}")
+            print(f"{s} Sim {x*pXs.size + z + 1}/{fids.size}")
 
-            noise_model = get_noise(meas_error=[1,0], quantum_error=[px,pz])
+            noise_model = get_noise(meas_error=[pz,0], quantum_error=[px]*2)
             res = simulator.run(T_qcirc,noise_model=noise_model,shots=shots).result()
             
             # Get initial and final logical matrix
