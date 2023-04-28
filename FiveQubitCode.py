@@ -24,7 +24,7 @@ class FiveQubitCode():
                    'XIXZZ',
                    'ZXIXZ']    
     q_reg = qiskit.QuantumRegister(len(stabilizers[0]), name='q')
-    a_reg = qiskit.AncillaRegister(len(stabilizers), name='a')
+    a_reg = qiskit.AncillaRegister(1, name='a')
     c_reg = qiskit.ClassicalRegister(len(stabilizers), name='synds')
     __synd_LUT = {}
 
@@ -69,7 +69,6 @@ class FiveQubitCode():
         qcirc = qiskit.QuantumCircuit(q_reg,a_reg,c_reg,name='Measurement')
 
         # Initializr data qubits to |+>
-        qcirc.initialize('+'*4,qcirc.ancillas[:4])
 
         # Construct controlled unitary measurements
         for j,stab in enumerate(FiveQubitCode.stabilizers):
@@ -77,16 +76,17 @@ class FiveQubitCode():
             if j != 0: 
                 qcirc.barrier()
 
+            qcirc.initialize('+',qcirc.ancillas)
             for i,s in enumerate(stab):
                 if s != 'I':
                     if s == 'Z':
-                        qcirc.cz(a_reg[j],q_reg[i])
+                        qcirc.cz(a_reg,q_reg[i])
                     elif s == 'X':
-                        qcirc.cnot(a_reg[j],q_reg[i])
+                        qcirc.cnot(a_reg,q_reg[i])
             
             # X-basis measurements
-            qcirc.h(a_reg[j])
-            qcirc.measure(a_reg[j],c_reg[j])  
+            qcirc.h(a_reg)
+            qcirc.measure(a_reg,c_reg[j])  
         return qcirc    
 
     def err_correct() -> qiskit.QuantumCircuit:
