@@ -18,6 +18,9 @@ def str_transpose(l: list) -> list:
 
 # %% Code class
 class FiveQubitCode():
+    # These stabilizer strings are in little-endian
+    # i.e. they operate on qubits [0,1,2,...]
+    # instead of qubits [5,4,3,...]
     stabilizers = ['XZZXI',
                    'IXZZX',
                    'XIXZZ',
@@ -105,7 +108,7 @@ class FiveQubitCode():
             num_stabs, num_qubits = stabs_np.shape
 
             # Ignore the trivial no error syndrome by starting at 1
-            synds = list(range(1,2**num_stabs))
+            synds = list(range(2**num_stabs))
 
             corrections = []
             for synd in synds:
