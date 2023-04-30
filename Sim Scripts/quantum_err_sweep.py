@@ -19,8 +19,9 @@ from FiveQubitCode import FiveQubitCode
 
 # %%
 # Probabilities to sweep
-pXs = np.append(np.float_power(10,np.arange(-3,0)),np.arange(0.125,1.125,0.125))
-pXs.put(0,0)
+pXs = np.append(np.float_power(10,np.arange(-3,0)),np.linspace(0,1,20))
+# pXs.put(0,0)
+pXs.sort()
 pZs = pXs
 
 # Initial states
@@ -37,6 +38,7 @@ def build_circuit(init_state:str) -> qiskit.QuantumCircuit:
 
     qcirc = QuantumCircuit(q_reg, a_reg, c_reg)
     qcirc.initialize(init_state+'0'*4,q_reg)
+    qcirc.save_density_matrix([q_reg[4]],'init_data')
     qcirc.compose(FiveQubitCode.encoder(),inplace=True)
     qcirc.save_density_matrix(q_reg,'init_logical')
     qcirc.barrier()
@@ -45,6 +47,9 @@ def build_circuit(init_state:str) -> qiskit.QuantumCircuit:
     qcirc.compose(FiveQubitCode.stab_meas(),inplace=True)
     qcirc.compose(FiveQubitCode.err_correct(),inplace=True)
     qcirc.save_density_matrix(q_reg,'final_logical')
+    qcirc.barrier()
+    qcirc.compose(FiveQubitCode.decoder(),inplace=True)
+    qcirc.save_density_matrix([q_reg[4]],'final_data')
 
     return qcirc
 
@@ -59,7 +64,7 @@ for s in init_states:
 
     for (x,px) in enumerate(pXs):
         for (z,pz) in enumerate(pZs):
-            print(f"{s} Sim {x*pXs.size + z + 1}/{fids.size}")
+            print(f"{s} Sim {x*pXs.size + z + 1}/{pXs.size*pZs.size}")
 
             noise_model = get_noise(meas_error=[1,0], quantum_error=[px,pz])
             res = simulator.run(T_qcirc,noise_model=noise_model,shots=shots).result()
@@ -67,6 +72,8 @@ for s in init_states:
             # Get initial and final logical matrix
             rho_logical_i = res.data()['init_logical']
             rho_logical_f = res.data()['final_logical']
+            rho_data_i = res.data()['init_data']
+            rho_data_f = res.data()['final_data']
 
             # Calculate fidelity and save to file
             fids[x,z] = state_fidelity(rho_logical_i,rho_logical_f)
