@@ -69,7 +69,7 @@ def run_sweep(noise_func, simulator, init_state: str,
 
     for (x,px) in enumerate(pXs):
         for (z,pz) in enumerate(pZs):
-            print(f"{init_state} Sim {x*pXs.size + z + 1}/{pXs.size*pZs.size}")
+            print(f"{datafile} Sim {x*pXs.size + z + 1}/{pXs.size*pZs.size}")
 
             noise_model = noise_func(px,pz)
             res = simulator.run(T_qcirc,noise_model=noise_model,shots=shots).result()
