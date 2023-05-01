@@ -5,3 +5,4 @@ env/
 *.csv
 generate_lut_txt.py
 *.npz
+*.out
