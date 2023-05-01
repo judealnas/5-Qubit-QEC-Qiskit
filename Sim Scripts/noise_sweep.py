@@ -136,7 +136,7 @@ z_data = ('p', pZs)
 for s in init_states:
     datafile = f'eff_err_sweep_{s}'
     print(f'Efficiency Error Sweep {s}')
-    run_sweep(quantum_error, simulator, s, x_data, z_data, datafile)
+    run_sweep(efficiency_error, simulator, s, x_data, z_data, datafile)
 # %% Dark count error sweep
 def darkcount_error(dc: float, p: float):
     return get_noise(meas_error=[dc,0], quantum_error=[p]*2)
@@ -147,4 +147,5 @@ z_data = ('p', pZs)
 for s in init_states:
     datafile = f'dc_err_sweep_{s}'
     print(f'Dark count Error Sweep {s}')
-    run_sweep(quantum_error, simulator, s, x_data, z_data, datafile)
+    run_sweep(darkcount_error, simulator, s, x_data, z_data, datafile)
+# %%
