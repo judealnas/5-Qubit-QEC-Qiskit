@@ -195,7 +195,7 @@ def sim_reps(num_reps: int, num_shots:int, init_state: str, noise_model: NoiseMo
 
     # Obtain final data state by decoding
     decode_op = Operator(FiveQubitCode.decoder())
-    rhos_data_f = [partial_trace(rho.evolve(decode_op),range(4))]
+    rhos_data_f = [partial_trace(rho.evolve(decode_op),range(4)) for rho in rhos_logical_f]
 
     # Calculate logical and data state fidelities
     fids_logical = [state_fidelity(rho_data_i, rf) for rf in rhos_data_f]
@@ -219,7 +219,7 @@ def rep_sweep(noise_func: Callable[[float],NoiseModel], init_state: str,
 
     for (i,n) in enumerate(reps):
         for(j,param) in enumerate(params):
-            print(f'{filename} Sim {i*reps.size + j + 1}/{mean_fids_logical.size}')
+            print(f'{filename} Sim {i*params.size + j + 1}/{mean_fids_logical.size}')
 
             noise_model = noise_func(param)
             dict_sim = sim_reps(num_reps=n, num_shots=num_shots,
@@ -228,36 +228,44 @@ def rep_sweep(noise_func: Callable[[float],NoiseModel], init_state: str,
             mean_fids_logical[i,j], std_fids_logical[i,j] = dict_sim['logical']
             mean_fids_data[i,j], std_fids_data[i,j] = dict_sim['data']
 
-            np.savez(filename,
+            np.savez(filename, shots=num_shots,
                      row_label='reps', row_data=reps,
                      col_label=param_label, col_data=params,
                      mean_fids_logical=mean_fids_logical, std_fids_logical=std_fids_logical,
                      mean_fids_data=mean_fids_data, std_fids_data=std_fids_data)
 # %% Sweep parameters
-meas_params = np.append(np.logspace(-3,0,20),np.linspace(0,1,20))
+meas_params = np.append(np.logspace(-3,0,10),np.linspace(0,1,20))
 ps = [0,1e-3,1e-2,0.1]
 ns = np.arange(1,20)
-shots = 2**9
+shots = 2**7
+init_state = '0'
 # %% Efficiency sweep
 for p in ps:
     eff_noise_model_func = lambda x: get_noise(meas_error=[x,0],quantum_error=[p]*2)
+    filename = f'eff_rep_sweep_p{p}_s{init_state}.npz'
     rep_sweep(noise_func=eff_noise_model_func,
-              init_state='0',
+              init_state=init_state,
               reps=ns,
               params=meas_params,
               param_label='eff',
-              num_shots=2**9,
-              filename=f'eff_rep_sweep_p{p}')
+              num_shots=shots,
+              filename=filename)
+    
+    # Add the quantum noise probability as a data member
+    npz = np.load(filename)
+    np.savez(filename, **npz, quantum_err=p)
 # %% Dark count sweep
 for p in ps:
-    eff_noise_model_func = lambda x: get_noise(meas_error=[0,x],quantum_error=[p]*2)
-    rep_sweep(noise_func=eff_noise_model_func,
-              init_state='0',
+    dc_noise_model_func = lambda x: get_noise(meas_error=[1,x],quantum_error=[p]*2)
+    filename = f'dc_rep_sweep_p{p}_s{init_state}.npz'
+    rep_sweep(noise_func=dc_noise_model_func,
+              init_state=init_state,
               reps=ns,
               params=meas_params,
               param_label='dc',
-              num_shots=2**9,
-              filename=f'dc_rep_sweep_p{p}')
-
+              num_shots=shots,
+              filename=filename)
     
-    
+    # Add the quantum noise probability as a data member
+    npz = np.load(filename)
+    np.savez(filename, **npz, quantum_err=p)
