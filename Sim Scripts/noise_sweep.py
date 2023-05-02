@@ -3,8 +3,7 @@
 # calculating the final state fidelities 
 # given initial states of logical |0>,|+> and |+i>
 # %%
-import sys
-import os
+import sys, os
 sys.path.append(os.path.realpath('.'))
 sys.path.append(os.path.realpath('..'))
 import qiskit
@@ -33,10 +32,10 @@ def build_circuit(init_state:str) -> qiskit.QuantumCircuit:
     qcirc.barrier()
     qcirc.compose(FiveQubitCode.stab_meas(),inplace=True)
     qcirc.compose(FiveQubitCode.err_correct(),inplace=True)
-    qcirc.save_density_matrix(q_reg,'final_logical')
+    qcirc.save_density_matrix(q_reg,'final_logical',pershot=True)
     qcirc.barrier()
     qcirc.compose(FiveQubitCode.decoder(),inplace=True)
-    qcirc.save_density_matrix([q_reg[4]],'final_data')
+    qcirc.save_density_matrix([q_reg[4]],'final_data',pershot=True)
 
     return qcirc
 
@@ -66,28 +65,37 @@ def run_sweep(noise_func, simulator, init_state: str,
     fids_logical = np.empty([pXs.size,pZs.size])
     fids_logical.fill(np.nan)
     fids_data = fids_logical.copy()
+    fids_data_std = fids_logical.copy()
+    fids_logical_std = fids_logical.copy()
 
     for (x,px) in enumerate(pXs):
         for (z,pz) in enumerate(pZs):
             print(f"{datafile} Sim {x*pXs.size + z + 1}/{pXs.size*pZs.size}")
 
             noise_model = noise_func(px,pz)
-            res = simulator.run(T_qcirc,noise_model=noise_model,shots=shots).result()
+            res = simulator.run(T_qcirc,noise_model=noise_model,shots=shots,
+                                memory=True).result()
             
             # Get initial and final logical matrix
             rho_logical_i = res.data()['init_logical']
-            rho_logical_f = res.data()['final_logical']
             rho_data_i = res.data()['init_data']
-            rho_data_f = res.data()['final_data']
+            rhos_logical_f = res.data()['final_logical']
+            rhos_data_f = res.data()['final_data']
 
-            fids_logical[x,z] = state_fidelity(rho_logical_i,rho_logical_f)
-            fids_data[x,z] = state_fidelity(rho_data_i,rho_data_f)
+            fL = [state_fidelity(rho_logical_i, rho) for rho in rhos_logical_f]
+            fD = [state_fidelity(rho_data_i, rho) for rho in rhos_data_f]
+
+            fids_logical[x,z] = np.mean(fL)
+            fids_logical_std[x,z] = np.std(fL)
+            fids_data[x,z] = np.mean(fD)
+            fids_data_std[x,z] = np.std(fD)
 
             # Calculate fidelity and save to file
             np.savez(datafile,shots=shots,
                      row_label=pX_label,row_data=pXs,
                      col_label=pZ_label,col_data=pZs,
-                     fids_data=fids_data,fids_logical=fids_logical)
+                     fids_data=fids_data,fids_logical=fids_logical,
+                     fids_data_std=fids_data_std,fids_logical_std=fids_logical_std)
 
 # %% Simulation parameters
 # Probabilities to sweep
@@ -100,8 +108,10 @@ pZs = pXs.copy()
 init_states = ['0','+','r']
 
 # simulator = service.get_backend('ibmq_qasm_simulator')
-simulator = Aer.get_backend('aer_simulator_density_matrix')
+simulator = Aer.get_backend('qasm_simulator')
 shots = 2**9
+
+datapath = os.path.join(os.path.dirname(__file__),'Modified Data')
 
 # %% Quantum error sweep
 def quantum_error(px,pz):
@@ -111,7 +121,7 @@ x_data = ('px', pXs)
 z_data = ('pz', pZs)
 
 for s in init_states:
-    datafile = f'quant_err_sweep_{s}'
+    datafile = os.path.join(datapath, f'quant_err_sweep_{s}')
     print(f'Quantum Error Sweep {s}')
     run_sweep(quantum_error, simulator, s, x_data, z_data, datafile)
 
@@ -123,7 +133,7 @@ x_data = ('eff', pXs)
 z_data = ('dc', pZs)
 
 for s in init_states:
-    datafile = f'meas_err_sweep_{s}'
+    datafile = os.path.join(datapath, f'meas_err_sweep_{s}')
     print(f'Measurement Error Sweep {s}')
     run_sweep(measurement_error, simulator, s, x_data, z_data, datafile)
 # %% Efficiency sweep
@@ -134,18 +144,17 @@ x_data = ('eff', pXs)
 z_data = ('p', pZs)
 
 for s in init_states:
-    datafile = f'eff_err_sweep_{s}'
+    datafile = os.path.join(datapath, f'eff_err_sweep_{s}')
     print(f'Efficiency Error Sweep {s}')
     run_sweep(efficiency_error, simulator, s, x_data, z_data, datafile)
 # %% Dark count error sweep
 def darkcount_error(dc: float, p: float):
-    return get_noise(meas_error=[dc,0], quantum_error=[p]*2)
+    return get_noise(meas_error=[1,dc], quantum_error=[p]*2)
 
 x_data = ('dc', pXs)
 z_data = ('p', pZs)
 
 for s in init_states:
-    datafile = f'dc_err_sweep_{s}'
+    datafile = os.path.join(datapath, f'dc_err_sweep_{s}')
     print(f'Dark count Error Sweep {s}')
     run_sweep(darkcount_error, simulator, s, x_data, z_data, datafile)
-# %%

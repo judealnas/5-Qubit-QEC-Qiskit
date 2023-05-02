@@ -6,3 +6,4 @@ env/
 generate_lut_txt.py
 *.npz
 *.out
+*.tex
